@@ -1,23 +1,13 @@
 #include <Arduino.h>
 #include <NextBME.h>
 #include <NextTM1637.h>
-#include <PubSubClient.h>
-#include <WiFiClientSecure.h>
 #include <Adafruit_BME280.h>
 #include <ArduinoJson.h>
 #include <NextMPU6050.h>
-
-// Declare Network and MQTT 
-WiFiClientSecure network;
-PubSubClient mqtt(network);
-
-struct Topics {
-  const char* vitals = "patient/vitals";
-  const char* fall = "patient/fall";
-  const char* call = "patient/call";
-};
-
-Topics mqttTopics;
+#include "NetworkManager.h"
+#include "WebServerManager.h"
+#include "AlertService.h"
+#include "Config.h"
 
 // Declare BME
 Adafruit_BME280 bmeSensor;
@@ -45,33 +35,6 @@ const int BUZZER_PIN = 26;
 const int ALERT_LED_PIN = 33;
 
 
-void connectMqtt() {
-    Serial.println("Connecting to MQTT...");
-
-    if (!mqtt.connect("ESP32-Server-Monitor", MQTT_USER, MQTT_PASS)) {
-        Serial.print("MQTT connection failed: ");
-        Serial.println(mqtt.state());
-        delay(2000);
-    } else {
-        Serial.println("MQTT connected");
-    }  
-}
-
-void connectWifi() {
-    Serial.println("Connecting to WiFi...");
-
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.println('.');
-        delay(500);
-    }
-    
-    Serial.println("Wifi connected");
-    network.setInsecure();
-    mqtt.setServer(MQTT_HOST, MQTT_PORT);
-}
-
 void startSensors() {
     if (!bmeSensor.begin(BME_ADDRESS)) {
         Serial.println("No sensors found at address 0x77. Check wiring/addresses.");
@@ -93,23 +56,6 @@ void startSensors() {
     display.setBrightness(4);
 }
 
-void sendJsonMQTT(const char* alerType) {
-    StaticJsonDocument<200> doc;
-
-    doc["deviceId"] = "MakerBoard_01";
-    doc["temperature"] = bmeSensor.readTemperature();
-    doc["pressure"] = bmeSensor.readPressure() / 100.0;
-    doc["humidity"] = bmeSensor.readHumidity();
-    doc["alert"] = alerType;
-
-    char buffer[256];
-    serializeJson(doc, buffer);
-
-    mqtt.publish(alerType, buffer);
-    Serial.print("Published: ");
-    Serial.println(buffer);
-}
-
 void patientCall() {
   digitalWrite(ALERT_LED_PIN, HIGH);
   digitalWrite(BUZZER_PIN, HIGH);
@@ -119,23 +65,24 @@ void patientCall() {
   digitalWrite(ALERT_LED_PIN, LOW);
 }
 
-void btnControl() {
+void sosButton() {
     readSOSBtn = digitalRead(SOS_BTN_PIN);
 
     if (readSOSBtn == LOW) {
       patientCall();
-      sendJsonMQTT(mqttTopics.call);
+      sendJsonMQTT(TOPIC_ALERTS, alertType.emergencyButton);
 
       delay(100);
     }
 }
 
+
 // ── Thresholds ──────────────────────────────────────────────────────────────
 // Free-fall: total acceleration drops below this value (in g)
-const float FREEFALL_THRESHOLD = 0.5;
+const float FREEFALL_THRESHOLD = 0.4;
 
 // Impact: total acceleration exceeds this value (in g)
-const float IMPACT_THRESHOLD = 2.5;
+const float IMPACT_THRESHOLD = 1.5;
 
 // After impact, if the person is still lying down the Z-axis will be near 0
 // (the sensor is now horizontal instead of vertical).
@@ -144,7 +91,7 @@ const float POSTURE_Z_THRESHOLD = 0.7;
 
 // Maximum time (ms) between free-fall detection and impact detection.
 // If impact doesn't follow free-fall within this window, reset.
-const unsigned long FALL_WINDOW_MS = 500;
+const unsigned long FALL_WINDOW_MS = 1800;
 
 // Minimum time (ms) to keep the fall flag active before resetting.
 // Prevents re-triggering immediately.
@@ -169,7 +116,7 @@ float totalAcceleration(float ax, float ay, float az) {
 
 void triggerFallAlert() {
   Serial.println(">>> FALL DETECTED — publishing to MQTT patient/fall <<<");
-  sendJsonMQTT(mqttTopics.fall);
+  sendJsonMQTT(TOPIC_ALERTS, alertType.fallDetected);
 }
 
 void fallDectection() {
@@ -210,7 +157,7 @@ void fallDectection() {
       if (acc > IMPACT_THRESHOLD) {
         // Impact detected — now check posture
         // If az is low, the person is now lying flat (sensor horizontal)
-        if (abs(az) < POSTURE_Z_THRESHOLD) {
+        if (abs(az) > POSTURE_Z_THRESHOLD) {
           fallState = FALL_CONFIRMED;
           fallConfirmedTimestamp = now;
           fallAlertSent = false;
@@ -239,14 +186,21 @@ void fallDectection() {
   }
 
   // // ── Debug output ────────────────────────────────────────────────────────
-  // Serial.print("acc_total=");
-  // Serial.print(acc, 3);
-  // Serial.print("g  az=");
-  // Serial.print(az, 3);
-  // Serial.print("g  state=");
-  // Serial.println(fallState == IDLE ? "IDLE" : fallState == FREEFALL_DETECTED ? "FREEFALL" : "CONFIRMED");
+  Serial.print("acc_total=");
+  Serial.print(acc, 3);
+  Serial.print("g  az=");
+  Serial.print(az, 3);
+  Serial.print("g  state=");
+  Serial.println(fallState == IDLE ? "IDLE" : fallState == FREEFALL_DETECTED ? "FREEFALL" : "CONFIRMED");
+  Serial.print("Accel: ");
+  Serial.print(ax); Serial.print("g, ");
+  Serial.print(ay); Serial.print("g, ");
+  Serial.print(az); Serial.println("g");
 
-  // delay(20);
+
+  Serial.println("=========================================================== \n");
+
+  delay(200);
 }
 
 void updateDisplay() {
@@ -285,10 +239,32 @@ void setup() {
 
     connectWifi();
     startSensors();
+    initWebServer();
 
     pinMode(SOS_BTN_PIN, INPUT);
     pinMode(ALERT_LED_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
+}
+
+void criticalVitals() {
+    float temperature = bmeSensor.readTemperature();
+    float pressure = bmeSensor.readPressure() / 100;
+    
+    if (temperature < tempMin) {
+      sendJsonMQTT(TOPIC_ALERTS, alertType.lowTemperature);
+    };
+    
+    if (temperature > tempMax) {
+      sendJsonMQTT(TOPIC_ALERTS, alertType.highTemperature);
+    }
+
+    if (pressure > bpSys) {
+      sendJsonMQTT(TOPIC_ALERTS, alertType.highPressure);
+    };
+    
+    if (pressure < bpDia) {
+      sendJsonMQTT(TOPIC_ALERTS, alertType.lowPressure);
+    }
 }
 
 unsigned long previousMillis = 0;
@@ -301,15 +277,20 @@ void loop() {
 
     mqtt.loop();
 
+    server.handleClient();
+
+    // Handle Criticale cases
+    criticalVitals();
+
+    // Handle Normal regular case
     unsigned long currentMillis = millis();
 
     if (currentMillis - previousMillis >= interval) {
-      sendJsonMQTT(mqttTopics.vitals);
+      sendJsonMQTT(TOPIC_VITALS, alertType.normal);
       previousMillis = currentMillis;
     }
 
     updateDisplay();
-
     fallDectection();
-    btnControl();
+    sosButton();
 }
