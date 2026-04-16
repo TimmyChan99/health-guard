@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <Wire.h>
+#include <PubSubClient.h>
 #include <NextBME.h>
 #include <NextTM1637.h>
 #include <Adafruit_BME280.h>
@@ -23,10 +26,12 @@ const int SDA_PIN = 21; // GPIO 21
 const int SCL_PIN = 22; // GPIO 22
 NextMPU6050 mpu;
 
-// Millis 
+// Millis
 unsigned long lastSwitchTime = 0;
 int currentValueIndex = 0;
 const int displayInterval = 2000;
+unsigned long lastAlertMillis = 0;
+const long ALERT_COOLDOWN_MS = 30000; // 30 seconds cooldown between alerts
 
 // PINs
 const int SOS_BTN_PIN = 34;
@@ -232,10 +237,7 @@ void updateDisplay() {
 
 void setup() {
     Serial.begin(115200);
-
-    while(Serial.available() == 0) {
-        delay(10);
-    }
+    delay(500);
 
     connectWifi();
     startSensors();
@@ -244,31 +246,51 @@ void setup() {
     pinMode(SOS_BTN_PIN, INPUT);
     pinMode(ALERT_LED_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
+
+    for (int i = 0; i < 6; i++) {
+        digitalWrite(ALERT_LED_PIN, i % 2 == 0 ? HIGH : LOW);
+        delay(200);
+    }
+    digitalWrite(ALERT_LED_PIN, LOW);
+    Serial.println("Ready! Open browser to patient-monitor.local");
 }
 
 void criticalVitals() {
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastAlertMillis < ALERT_COOLDOWN_MS) return; // Cooldown active
+
     float temperature = bmeSensor.readTemperature();
     float pressure = bmeSensor.readPressure() / 100;
-    
+
+    bool alertSent = false;
+
     if (temperature < tempMin) {
       sendJsonMQTT(TOPIC_ALERTS, alertType.lowTemperature);
+      alertSent = true;
     };
-    
+
     if (temperature > tempMax) {
       sendJsonMQTT(TOPIC_ALERTS, alertType.highTemperature);
+      alertSent = true;
     }
 
     if (pressure > bpSys) {
       sendJsonMQTT(TOPIC_ALERTS, alertType.highPressure);
+      alertSent = true;
     };
-    
+
     if (pressure < bpDia) {
       sendJsonMQTT(TOPIC_ALERTS, alertType.lowPressure);
+      alertSent = true;
+    }
+
+    if (alertSent) {
+      lastAlertMillis = currentMillis;
     }
 }
 
 unsigned long previousMillis = 0;
-const long interval = 30000;
+long mqttIntervalSeconds = 1;
 
 void loop() {
     if (!mqtt.connected()) {
@@ -279,13 +301,15 @@ void loop() {
 
     server.handleClient();
 
-    // Handle Criticale cases
+    // Handle Critical cases
     criticalVitals();
 
     // Handle Normal regular case
     unsigned long currentMillis = millis();
 
-    if (currentMillis - previousMillis >= interval) {
+    Serial.printf("Current MQTT interval: %ld seconds (%ld ms)\n", mqttIntervalSeconds, mqttIntervalSeconds * 1000);
+    if (currentMillis - previousMillis >= mqttIntervalSeconds * 1000) {
+      Serial.println(">>> Sending normal MQTT data <<<");
       sendJsonMQTT(TOPIC_VITALS, alertType.normal);
       previousMillis = currentMillis;
     }
