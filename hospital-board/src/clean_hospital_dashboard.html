@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Monitor - Data Visualization</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+
+    <style>
+        :root {
+            --primary: #2E86AB;
+            --success: #06A77D;
+            --danger: #D62828;
+            --warning: #F77F00;
+            --light: #F0F0F0;
+            --dark: #1A1A1A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container-main {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-nav {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-nav .btn {
+            margin: 0 10px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .section-nav .btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .section-content {
+            display: none;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        .section-header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-header h2 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-header p {
+            color: #666;
+            margin: 0;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #999;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-card .avg-value {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .stat-card .avg-value span {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .stat-card.boolean .value {
+            font-size: 18px;
+            color: var(--success);
+            margin-bottom: 0;
+        }
+
+        .stat-card.boolean.alert .value {
+            color: var(--danger);
+        }
+
+        .stat-card.boolean.alert {
+            border-left-color: var(--danger);
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-card h4 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .table-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .table-header {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .table-header h3 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .table-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table thead {
+            background: #f8f9fa;
+        }
+
+        table th {
+            padding: 12px;
+            text-align: left;
+            color: var(--primary);
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 12px;
+        }
+
+        table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge-alert {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-alert.normal {
+            background: rgba(6, 167, 125, 0.2);
+            color: var(--success);
+        }
+
+        .badge-alert.alert {
+            background: rgba(245, 66, 66, 0.2);
+            color: #f54242;
+        }
+
+        .temperature-indicator {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .temperature-indicator.normal {
+            background: rgba(46, 134, 171, 0.2);
+            color: var(--primary);
+        }
+
+        .temperature-indicator.hot {
+            background: rgba(214, 40, 40, 0.2);
+            color: var(--danger);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .filter-row th {
+            padding: 6px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .filter-row input,
+        .filter-row select {
+            font-size: 11px;
+            padding: 3px 5px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+
+        .header-row th {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .header-row th:hover {
+            background: #e9ecef;
+        }
+
+        .sort-icon {
+            margin-left: 3px;
+            opacity: 0.5;
+        }
+
+        .sort-icon.sort-asc {
+            opacity: 1;
+            color: var(--primary);
+        }
+
+        .sort-icon.sort-desc {
+            opacity: 1;
+            color: var(--primary);
+            transform: rotate(180deg);
+        }
+
+        .alert-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--danger);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .export-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-export {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-export:hover {
+            background: #059372;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            table th, table td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <!-- Section Navigation -->
+        <div class="section-nav text-center">
+            <button class="btn btn-outline-primary" id="roomSectionBtn" onclick="switchSection('room')">
+                <i class="fas fa-door-open"></i> Room Environment
+            </button>
+            <button class="btn btn-outline-primary active" id="patientSectionBtn" onclick="switchSection('patient')">
+                <i class="fas fa-user"></i> Patient Environment
+            </button>
+        </div>
+
+        <!-- Room Environment Section -->
+        <div id="roomSection" class="section-content">
+            <div class="section-header">
+                <h2><i class="fas fa-door-open"></i> Room Environment Monitoring</h2>
+                <p>Real-time monitoring of room temperature, humidity, and pressure conditions</p>
+            </div>
+
+            <!-- Room Stats Cards -->
+            <div class="stats-cards" id="roomStats">
+                <div class="stat-card">
+                    <h3>Temperature</h3>
+                    <div class="value" id="roomCurrentTemp">-- °C</div>
+                    <div class="avg-value">Avg: <span id="roomAvgTemp">-- °C</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Humidity</h3>
+                    <div class="value" id="roomCurrentHumidity">-- %</div>
+                    <div class="avg-value">Avg: <span id="roomAvgHumidity">-- %</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Pressure</h3>
+                    <div class="value" id="roomCurrentPressure">-- hPa</div>
+                    <div class="avg-value">Avg: <span id="roomAvgPressure">-- hPa</span></div>
+                </div>
+                <div class="stat-card boolean" id="roomAlertStatus">
+                    <h3>Alert Status</h3>
+                    <div class="value">NORMAL</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Readings</h3>
+                    <div class="value" id="roomTotalReadings">0</div>
+                </div>
+            </div>
+
+            <!-- Room Charts -->
+            <div class="charts-section">
+                <div class="chart-card">
+                    <h4><i class="fas fa-thermometer-half"></i> Temperature (°C)</h4>
+                    <canvas id="roomTempChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4><i class="fas fa-tint"></i> Humidity (%)</h4>
+                    <canvas id="roomHumidityChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4><i class="fas fa-gauge"></i> Pressure (hPa)</h4>
+                    <canvas id="roomPressureChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Room Data Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-table"></i> Room Data Records</h3>
+                </div>
+                <div class="table-container">
+                    <table id="roomTable">
+                        <thead>
+                            <tr class="filter-row">
+                                <th><input type="text" placeholder="Device ID" data-column="device_id"></th>
+                                <th><input type="text" placeholder="Temperature" data-column="temperature"></th>
+                                <th><input type="text" placeholder="Humidity" data-column="humidity"></th>
+                                <th><input type="text" placeholder="Pressure" data-column="pressure"></th>
+                                <th><select data-column="alert_status"><option value="">All</option><option value="NORMAL">NORMAL</option><option value="ALERT">ALERT</option></select></th>
+                                <th><input type="text" placeholder="Date/Time" data-column="recorded_at"></th>
+                            </tr>
+                            <tr class="header-row">
+                                <th data-sort="device_id">Device ID <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="temperature">Temperature (°C) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="humidity">Humidity (%) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="pressure">Pressure (hPa) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="alert_status">Alert Status <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="recorded_at">Recorded At <i class="fas fa-sort sort-icon"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomBody">
+                            <tr>
+                                <td colspan="6" class="no-data">
+                                    <i class="fas fa-inbox"></i>
+                                    <div>Loading room data...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Environment Section -->
+        <div id="patientSection" class="section-content active">
+            <div class="section-header">
+                <h2><i class="fas fa-user"></i> Patient Environment Monitoring</h2>
+                <p>Real-time monitoring of patient vital signs and environmental conditions</p>
+            </div>
+
+            <!-- Patient Stats Cards -->
+            <div class="stats-cards" id="patientStats">
+                <div class="stat-card">
+                    <h3>Temperature</h3>
+                    <div class="value" id="patientCurrentTemp">-- °C</div>
+                    <div class="avg-value">Avg: <span id="patientAvgTemp">-- °C</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Humidity</h3>
+                    <div class="value" id="patientCurrentHumidity">-- %</div>
+                    <div class="avg-value">Avg: <span id="patientAvgHumidity">-- %</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>Pressure</h3>
+                    <div class="value" id="patientCurrentPressure">-- hPa</div>
+                    <div class="avg-value">Avg: <span id="patientAvgPressure">-- hPa</span></div>
+                </div>
+                <div class="stat-card boolean" id="patientFallStatus">
+                    <h3>Fall Detected</h3>
+                    <div class="value">FALSE</div>
+                </div>
+                <div class="stat-card boolean" id="patientEmergencyStatus">
+                    <h3>Emergency</h3>
+                    <div class="value">FALSE</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Readings</h3>
+                    <div class="value" id="patientTotalReadings">0</div>
+                </div>
+            </div>
+
+            <!-- Patient Charts -->
+            <div class="charts-section">
+                <div class="chart-card">
+                    <h4><i class="fas fa-thermometer-half"></i> Temperature (°C)</h4>
+                    <canvas id="patientTempChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4><i class="fas fa-tint"></i> Humidity (%)</h4>
+                    <canvas id="patientHumidityChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4><i class="fas fa-gauge"></i> Pressure (hPa)</h4>
+                    <canvas id="patientPressureChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Patient Data Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-table"></i> Patient Data Records</h3>
+                </div>
+                <div class="table-container">
+                    <table id="patientTable">
+                        <thead>
+                            <tr class="filter-row">
+                                <th><input type="text" placeholder="Date/Time" data-column="date"></th>
+                                <th><input type="text" placeholder="Device ID" data-column="device_id"></th>
+                                <th><input type="text" placeholder="Temperature" data-column="temperature"></th>
+                                <th><input type="text" placeholder="Humidity" data-column="humidity"></th>
+                                <th><input type="text" placeholder="Pressure" data-column="pressure"></th>
+                                <th><select data-column="chute_detectee"><option value="">All</option><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option></select></th>
+                                <th><select data-column="bouton_urgence"><option value="">All</option><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option></select></th>
+                            </tr>
+                            <tr class="header-row">
+                                <th data-sort="date">Date/Time <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="device_id">Device ID <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="temperature">Temperature (°C) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="humidity">Humidity (%) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="pressure">Pressure (hPa) <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="chute_detectee">Fall Detected <i class="fas fa-sort sort-icon"></i></th>
+                                <th data-sort="bouton_urgence">Emergency Button <i class="fas fa-sort sort-icon"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientBody">
+                            <tr>
+                                <td colspan="7" class="no-data">
+                                    <i class="fas fa-inbox"></i>
+                                    <div>Loading patient data...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+            <button class="btn-export" onclick="exportCSV()"><i class="fas fa-download"></i> Export All Data as CSV</button>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="alertModalLabel"><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="alertModalBody">
+                    <!-- Alert details will be populated here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Data storage
+        let roomData = [];
+        let patientData = [];
+        let filteredRoomData = [];
+        let filteredPatientData = [];
+        let roomSort = { column: null, direction: 'asc' };
+        let patientSort = { column: null, direction: 'asc' };
+        let activeAlerts = [];
+        let currentSection = 'patient';
+
+        // Chart instances
+        let roomTempChart, roomHumidityChart, roomPressureChart;
+        let patientTempChart, patientHumidityChart, patientPressureChart;
+
+        // Helper function to parse room dates
+        function parseRoomDate(dateStr) {
+            if (!dateStr) return new Date();
+            // Parse "14/04/2026 21:00:36" format
+            const parts = dateStr.split(' ');
+            if (parts.length !== 2) return new Date();
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            if (dateParts.length !== 3 || timeParts.length !== 3) return new Date();
+            return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                // Load room data
+                await loadCSVData(ROOM_SHEET_URL, 'room');
+
+                // Try to load patient data, fallback to adapted room data if fails
+                try {
+                    await loadCSVData(PATIENT_SHEET_URL, 'patient');
+                } catch (patientError) {
+                    console.warn('Patient data not available, using adapted room data:', patientError);
+                    // Adapt room data to patient format
+                    patientData = roomData.map(row => ({
+                        date: row.recorded_at,
+                        device_id: row.device_id,
+                        temperature: row.temperature,
+                        humidity: row.humidity,
+                        pressure: row.pressure,
+                        chute_detectee: row.alert_status === 'ALERT' ? 'TRUE' : 'FALSE',
+                        bouton_urgence: 'FALSE' // Default to false since room data doesn't have this
+                    }));
+                }
+
+                // Initialize filtered data
+                filteredRoomData = [...roomData];
+                filteredPatientData = [...patientData];
+
+                // Apply initial filters and sorts
+                applyFiltersAndSort();
+
+                // Check for alerts
+                checkForAlerts();
+
+                // Render tables
+                renderTables();
+                updateStats();
+                renderCharts();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Error loading data. Please check the console for details.');
+            }
+        }
+
+        async function loadCSVData(url, type) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Failed to load ${type} data`);
+
+            const csvText = await response.text();
+            const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
+
+            if (lines.length < 2) throw new Error(`No valid data in ${type} CSV`);
+
+            const headers = lines[0].split(',').map(h => h.trim());
+
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                if (Object.values(obj).some(v => v)) {
+                    data.push(obj);
+                }
+            }
+
+            if (type === 'room') {
+                roomData = data;
+            } else if (type === 'patient') {
+                patientData = data;
+            }
+        }
+
+        function switchSection(section) {
+            // Update navigation buttons
+            document.getElementById('roomSectionBtn').classList.toggle('active', section === 'room');
+            document.getElementById('patientSectionBtn').classList.toggle('active', section === 'patient');
+
+            // Show/hide sections
+            document.getElementById('roomSection').classList.toggle('active', section === 'room');
+            document.getElementById('patientSection').classList.toggle('active', section === 'patient');
+
+            currentSection = section;
+
+            // Update alerts for current section
+            checkForAlerts();
+
+            // Re-render charts for current section
+            renderCharts();
+        }
+
+        function applyFiltersAndSort() {
+            // Apply filters for room data
+            filteredRoomData = roomData.filter(row => {
+                const filters = document.querySelectorAll('#roomSection .filter-row input, #roomSection .filter-row select');
+                return Array.from(filters).every(filter => {
+                    const column = filter.dataset.column;
+                    const value = filter.value.toLowerCase();
+                    if (!value) return true;
+                    return String(row[column] || '').toLowerCase().includes(value);
+                });
+            });
+
+            // Apply filters for patient data
+            filteredPatientData = patientData.filter(row => {
+                const filters = document.querySelectorAll('#patientSection .filter-row input, #patientSection .filter-row select');
+                return Array.from(filters).every(filter => {
+                    const column = filter.dataset.column;
+                    const value = filter.value.toLowerCase();
+                    if (!value) return true;
+                    return String(row[column] || '').toLowerCase().includes(value);
+                });
+            });
+
+            // Apply sorting for room data
+            if (roomSort.column) {
+                filteredRoomData.sort((a, b) => {
+                    const aVal = a[roomSort.column] || '';
+                    const bVal = b[roomSort.column] || '';
+                    let result = 0;
+
+                    if (roomSort.column === 'temperature' || roomSort.column === 'humidity' || roomSort.column === 'pressure') {
+                        result = parseFloat(aVal) - parseFloat(bVal);
+                    } else {
+                        result = String(aVal).localeCompare(String(bVal));
+                    }
+
+                    return roomSort.direction === 'asc' ? result : -result;
+                });
+            }
+
+            // Apply sorting for patient data
+            if (patientSort.column) {
+                filteredPatientData.sort((a, b) => {
+                    const aVal = a[patientSort.column] || '';
+                    const bVal = b[patientSort.column] || '';
+                    let result = 0;
+
+                    if (patientSort.column === 'temperature' || patientSort.column === 'humidity' || patientSort.column === 'pressure') {
+                        result = parseFloat(aVal) - parseFloat(bVal);
+                    } else if (patientSort.column === 'date') {
+                        result = new Date(aVal) - new Date(bVal);
+                    } else {
+                        result = String(aVal).localeCompare(String(bVal));
+                    }
+
+                    return patientSort.direction === 'asc' ? result : -result;
+                });
+            }
+        }
+
+        function checkForAlerts() {
+            activeAlerts = [];
+
+            // Check alerts based on current section
+            if (currentSection === 'room') {
+                const latestRoomAlert = roomData.slice(-1)[0];
+                if (latestRoomAlert && latestRoomAlert.alert_status === 'ALERT') {
+                    activeAlerts.push({
+                        type: 'room',
+                        title: 'Room Environment Alert',
+                        device: latestRoomAlert.device_id,
+                        timestamp: latestRoomAlert.recorded_at,
+                        details: {
+                            temperature: `${parseFloat(latestRoomAlert.temperature || 0).toFixed(2)}°C`,
+                            humidity: `${parseFloat(latestRoomAlert.humidity || 0).toFixed(2)}%`,
+                            pressure: `${parseFloat(latestRoomAlert.pressure || 0).toFixed(2)} hPa`,
+                            status: latestRoomAlert.alert_status
+                        }
+                    });
+                }
+            } else if (currentSection === 'patient') {
+                const latestPatientAlert = patientData.slice(-1)[0];
+                if (latestPatientAlert) {
+                    if (latestPatientAlert.chute_detectee === 'TRUE') {
+                        activeAlerts.push({
+                            type: 'patient',
+                            title: 'Patient Fall Detection Alert',
+                            device: latestPatientAlert.device_id,
+                            timestamp: new Date(latestPatientAlert.date).toLocaleString(),
+                            details: {
+                                temperature: `${parseFloat(latestPatientAlert.temperature || 0).toFixed(2)}°C`,
+                                humidity: `${parseFloat(latestPatientAlert.humidity || 0).toFixed(2)}%`,
+                                pressure: `${parseFloat(latestPatientAlert.pressure || 0).toFixed(2)} hPa`,
+                                alert_type: 'Fall Detected'
+                            }
+                        });
+                    }
+                    if (latestPatientAlert.bouton_urgence === 'TRUE') {
+                        activeAlerts.push({
+                            type: 'patient',
+                            title: 'Patient Emergency Alert',
+                            device: latestPatientAlert.device_id,
+                            timestamp: new Date(latestPatientAlert.date).toLocaleString(),
+                            details: {
+                                temperature: `${parseFloat(latestPatientAlert.temperature || 0).toFixed(2)}°C`,
+                                humidity: `${parseFloat(latestPatientAlert.humidity || 0).toFixed(2)}%`,
+                                pressure: `${parseFloat(latestPatientAlert.pressure || 0).toFixed(2)} hPa`,
+                                alert_type: 'Emergency Button Pressed'
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (activeAlerts.length > 0) {
+                showAlertBadge();
+            } else {
+                hideAlertBadge();
+            }
+        }
+
+        function showAlertBadge() {
+            let badge = document.getElementById('alertBadge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'alertBadge';
+                badge.className = 'alert-badge';
+                badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${activeAlerts.length} Active Alert${activeAlerts.length > 1 ? 's' : ''}`;
+                badge.onclick = showAlertModal;
+                document.body.appendChild(badge);
+            }
+            badge.style.display = 'block';
+        }
+
+        function hideAlertBadge() {
+            const badge = document.getElementById('alertBadge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+
+        function showAlertModal() {
+            const modalBody = document.getElementById('alertModalBody');
+            modalBody.innerHTML = activeAlerts.map(alert => `
+                <div class="alert alert-danger mb-3">
+                    <h6 class="alert-heading mb-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${alert.title}
+                    </h6>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <strong>Device:</strong> ${alert.device}<br>
+                            <strong>Time:</strong> ${alert.timestamp}<br>
+                            ${alert.details.alert_type ? `<strong>Alert Type:</strong> ${alert.details.alert_type}<br>` : ''}
+                        </div>
+                        <div class="col-sm-6">
+                            <strong>Temperature:</strong> ${alert.details.temperature}<br>
+                            <strong>Humidity:</strong> ${alert.details.humidity}<br>
+                            <strong>Pressure:</strong> ${alert.details.pressure}<br>
+                            ${alert.details.status ? `<strong>Status:</strong> ${alert.details.status}<br>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            const modal = new bootstrap.Modal(document.getElementById('alertModal'));
+            modal.show();
+        }
+
+        function renderTables() {
+            // Room table
+            const roomBody = document.getElementById('roomBody');
+            if (filteredRoomData.length === 0) {
+                roomBody.innerHTML = '<tr><td colspan="6" class="no-data"><i class="fas fa-inbox"></i><div>No room data found</div></td></tr>';
+            } else {
+                roomBody.innerHTML = filteredRoomData.map(row => `
+                    <tr>
+                        <td><strong>${row.device_id || ''}</strong></td>
+                        <td>${getTempIndicator(parseFloat(row.temperature || 0))} ${parseFloat(row.temperature || 0).toFixed(2)}°C</td>
+                        <td>${parseFloat(row.humidity || 0).toFixed(2)}%</td>
+                        <td>${parseFloat(row.pressure || 0).toFixed(2)} hPa</td>
+                        <td><span class="badge-alert ${row.alert_status === 'NORMAL' ? 'normal' : 'alert'}">${row.alert_status || ''}</span></td>
+                        <td><small>${row.recorded_at || ''}</small></td>
+                    </tr>
+                `).join('');
+            }
+
+            // Patient table
+            const patientBody = document.getElementById('patientBody');
+            if (filteredPatientData.length === 0) {
+                patientBody.innerHTML = '<tr><td colspan="7" class="no-data"><i class="fas fa-inbox"></i><div>No patient data found</div></td></tr>';
+            } else {
+                patientBody.innerHTML = filteredPatientData.map(row => {
+                    const fallBadge = row.chute_detectee === 'TRUE' ? '<span class="badge-alert alert">FALL DETECTED</span>' : '<span class="badge-alert normal">OK</span>';
+                    const emergencyBadge = row.bouton_urgence === 'TRUE' ? '<span class="badge-alert alert">EMERGENCY</span>' : '<span class="badge-alert normal">NORMAL</span>';
+                    return `
+                        <tr>
+                            <td><small>${row.date ? new Date(row.date).toLocaleString() : ''}</small></td>
+                            <td><strong>${row.device_id || ''}</strong></td>
+                            <td>${getTempIndicator(parseFloat(row.temperature || 0))} ${parseFloat(row.temperature || 0).toFixed(2)}°C</td>
+                            <td>${parseFloat(row.humidity || 0).toFixed(2)}%</td>
+                            <td>${parseFloat(row.pressure || 0).toFixed(2)} hPa</td>
+                            <td>${fallBadge}</td>
+                            <td>${emergencyBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function getTempIndicator(temp) {
+            let className = 'normal';
+            if (temp > 38) className = 'hot';
+            return `<span class="temperature-indicator ${className}"></span>`;
+        }
+
+        function updateStats() {
+            // Room stats
+            if (filteredRoomData.length > 0) {
+                const latestRoom = filteredRoomData[0];
+                document.getElementById('roomCurrentTemp').textContent = parseFloat(latestRoom.temperature || 0).toFixed(1) + '°C';
+                document.getElementById('roomCurrentHumidity').textContent = parseFloat(latestRoom.humidity || 0).toFixed(1) + '%';
+                document.getElementById('roomCurrentPressure').textContent = parseFloat(latestRoom.pressure || 0).toFixed(1) + ' hPa';
+
+                const avgTemp = filteredRoomData.reduce((a, b) => a + parseFloat(b.temperature || 0), 0) / filteredRoomData.length;
+                const avgHumidity = filteredRoomData.reduce((a, b) => a + parseFloat(b.humidity || 0), 0) / filteredRoomData.length;
+                const avgPressure = filteredRoomData.reduce((a, b) => a + parseFloat(b.pressure || 0), 0) / filteredRoomData.length;
+
+                document.getElementById('roomAvgTemp').textContent = avgTemp.toFixed(1) + '°C';
+                document.getElementById('roomAvgHumidity').textContent = avgHumidity.toFixed(1) + '%';
+                document.getElementById('roomAvgPressure').textContent = avgPressure.toFixed(1) + ' hPa';
+
+                // Alert status
+                const alertCard = document.getElementById('roomAlertStatus');
+                const alertValue = document.querySelector('#roomAlertStatus .value');
+                alertValue.textContent = latestRoom.alert_status || 'NORMAL';
+                alertCard.classList.toggle('alert', latestRoom.alert_status === 'ALERT');
+            } else {
+                document.getElementById('roomCurrentTemp').textContent = '-- °C';
+                document.getElementById('roomCurrentHumidity').textContent = '-- %';
+                document.getElementById('roomCurrentPressure').textContent = '-- hPa';
+                document.getElementById('roomAvgTemp').textContent = '-- °C';
+                document.getElementById('roomAvgHumidity').textContent = '-- %';
+                document.getElementById('roomAvgPressure').textContent = '-- hPa';
+            }
+            document.getElementById('roomTotalReadings').textContent = filteredRoomData.length;
+
+            // Patient stats
+            if (filteredPatientData.length > 0) {
+                const latestPatient = filteredPatientData[0];
+                document.getElementById('patientCurrentTemp').textContent = parseFloat(latestPatient.temperature || 0).toFixed(1) + '°C';
+                document.getElementById('patientCurrentHumidity').textContent = parseFloat(latestPatient.humidity || 0).toFixed(1) + '%';
+                document.getElementById('patientCurrentPressure').textContent = parseFloat(latestPatient.pressure || 0).toFixed(1) + ' hPa';
+
+                const avgTemp = filteredPatientData.reduce((a, b) => a + parseFloat(b.temperature || 0), 0) / filteredPatientData.length;
+                const avgHumidity = filteredPatientData.reduce((a, b) => a + parseFloat(b.humidity || 0), 0) / filteredPatientData.length;
+                const avgPressure = filteredPatientData.reduce((a, b) => a + parseFloat(b.pressure || 0), 0) / filteredPatientData.length;
+
+                document.getElementById('patientAvgTemp').textContent = avgTemp.toFixed(1) + '°C';
+                document.getElementById('patientAvgHumidity').textContent = avgHumidity.toFixed(1) + '%';
+                document.getElementById('patientAvgPressure').textContent = avgPressure.toFixed(1) + ' hPa';
+
+                // Boolean states
+                const fallCard = document.getElementById('patientFallStatus');
+                const fallValue = document.querySelector('#patientFallStatus .value');
+                fallValue.textContent = latestPatient.chute_detectee || 'FALSE';
+                fallCard.classList.toggle('alert', latestPatient.chute_detectee === 'TRUE');
+
+                const emergencyCard = document.getElementById('patientEmergencyStatus');
+                const emergencyValue = document.querySelector('#patientEmergencyStatus .value');
+                emergencyValue.textContent = latestPatient.bouton_urgence || 'FALSE';
+                emergencyCard.classList.toggle('alert', latestPatient.bouton_urgence === 'TRUE');
+            } else {
+                document.getElementById('patientCurrentTemp').textContent = '-- °C';
+                document.getElementById('patientCurrentHumidity').textContent = '-- %';
+                document.getElementById('patientCurrentPressure').textContent = '-- hPa';
+                document.getElementById('patientAvgTemp').textContent = '-- °C';
+                document.getElementById('patientAvgHumidity').textContent = '-- %';
+                document.getElementById('patientAvgPressure').textContent = '-- hPa';
+            }
+            document.getElementById('patientTotalReadings').textContent = filteredPatientData.length;
+        }
+
+        function renderCharts() {
+            if (currentSection === 'room') {
+                renderRoomCharts();
+            } else {
+                renderPatientCharts();
+            }
+        }
+
+        function renderRoomCharts() {
+            const maxDataPoints = 20;
+
+            // Temperature chart
+            const tempCtx = document.getElementById('roomTempChart').getContext('2d');
+            const tempLabels = filteredRoomData.slice(0, maxDataPoints).map(r => {
+                const date = parseRoomDate(r.recorded_at);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const tempData = filteredRoomData.slice(0, maxDataPoints).map(r => parseFloat(r.temperature || 0));
+
+            if (roomTempChart) roomTempChart.destroy();
+            roomTempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: tempLabels,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: tempData,
+                        borderColor: '#D62828',
+                        backgroundColor: 'rgba(214, 40, 40, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#D62828',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: '°C' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+
+            // Humidity chart
+            const humidityCtx = document.getElementById('roomHumidityChart').getContext('2d');
+            const humidityLabels = filteredRoomData.slice(0, maxDataPoints).map(r => {
+                const date = parseRoomDate(r.recorded_at);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const humidityData = filteredRoomData.slice(0, maxDataPoints).map(r => parseFloat(r.humidity || 0));
+
+            if (roomHumidityChart) roomHumidityChart.destroy();
+            roomHumidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: {
+                    labels: humidityLabels,
+                    datasets: [{
+                        label: 'Humidity (%)',
+                        data: humidityData,
+                        borderColor: '#2E86AB',
+                        backgroundColor: 'rgba(46, 134, 171, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#2E86AB',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: '%' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+
+            // Pressure chart
+            const pressureCtx = document.getElementById('roomPressureChart').getContext('2d');
+            const pressureLabels = filteredRoomData.slice(0, maxDataPoints).map(r => {
+                const date = parseRoomDate(r.recorded_at);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const pressureData = filteredRoomData.slice(0, maxDataPoints).map(r => parseFloat(r.pressure || 0));
+
+            if (roomPressureChart) roomPressureChart.destroy();
+            roomPressureChart = new Chart(pressureCtx, {
+                type: 'line',
+                data: {
+                    labels: pressureLabels,
+                    datasets: [{
+                        label: 'Pressure (hPa)',
+                        data: pressureData,
+                        borderColor: '#06A77D',
+                        backgroundColor: 'rgba(6, 167, 125, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#06A77D',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: 'hPa' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+        }
+
+        function renderPatientCharts() {
+            const maxDataPoints = 20;
+
+            // Temperature chart
+            const tempCtx = document.getElementById('patientTempChart').getContext('2d');
+            const tempLabels = filteredPatientData.slice(0, maxDataPoints).map(r => {
+                const date = new Date(r.date);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const tempData = filteredPatientData.slice(0, maxDataPoints).map(r => parseFloat(r.temperature || 0));
+
+            if (patientTempChart) patientTempChart.destroy();
+            patientTempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: tempLabels,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: tempData,
+                        borderColor: '#D62828',
+                        backgroundColor: 'rgba(214, 40, 40, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#D62828',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: '°C' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+
+            // Humidity chart
+            const humidityCtx = document.getElementById('patientHumidityChart').getContext('2d');
+            const humidityLabels = filteredPatientData.slice(0, maxDataPoints).map(r => {
+                const date = new Date(r.date);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const humidityData = filteredPatientData.slice(0, maxDataPoints).map(r => parseFloat(r.humidity || 0));
+
+            if (patientHumidityChart) patientHumidityChart.destroy();
+            patientHumidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: {
+                    labels: humidityLabels,
+                    datasets: [{
+                        label: 'Humidity (%)',
+                        data: humidityData,
+                        borderColor: '#2E86AB',
+                        backgroundColor: 'rgba(46, 134, 171, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#2E86AB',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: '%' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+
+            // Pressure chart
+            const pressureCtx = document.getElementById('patientPressureChart').getContext('2d');
+            const pressureLabels = filteredPatientData.slice(0, maxDataPoints).map(r => {
+                const date = new Date(r.date);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const pressureData = filteredPatientData.slice(0, maxDataPoints).map(r => parseFloat(r.pressure || 0));
+
+            if (patientPressureChart) patientPressureChart.destroy();
+            patientPressureChart = new Chart(pressureCtx, {
+                type: 'line',
+                data: {
+                    labels: pressureLabels,
+                    datasets: [{
+                        label: 'Pressure (hPa)',
+                        data: pressureData,
+                        borderColor: '#06A77D',
+                        backgroundColor: 'rgba(6, 167, 125, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#06A77D',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: 'hPa' } },
+                        x: { title: { display: true, text: 'Time' } }
+                    }
+                }
+            });
+        }
+
+        function exportCSV() {
+            let csv = 'Room Environment Data\n';
+            csv += 'Device ID,Temperature,Humidity,Pressure,Alert Status,Recorded At\n';
+            filteredRoomData.forEach(r => {
+                csv += `${r.device_id || ''},${r.temperature || ''},${r.humidity || ''},${r.pressure || ''},${r.alert_status || ''},${r.recorded_at || ''}\n`;
+            });
+
+            csv += '\n\nPatient Environment Data\n';
+            csv += 'Date,Device ID,Temperature,Humidity,Pressure,Fall Detected,Emergency Button\n';
+            filteredPatientData.forEach(r => {
+                csv += `${r.date || ''},${r.device_id || ''},${r.temperature || ''},${r.humidity || ''},${r.pressure || ''},${r.chute_detectee || ''},${r.bouton_urgence || ''}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hospital_data_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+        }
+
+        // Google Sheets URLs
+        const ROOM_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRN82NPqGXfRU-PqGypyfZzQ9W0hLIuvwmA1fPj1inXg6pclZcQgna9jxJT-NJ3c-OekHiNE0lDOPiG/pub?output=csv";
+        const PATIENT_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRN82NPqGXfRU-PqGypyfZzQ9W0hLIuvwmA1fPj1inXg6pclZcQgna9jxJT-NJ3c-OekHiNE0lDOPiG/pub?gid=1325091331&output=csv";
+
+        // Event listeners for filters
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('#roomSection .filter-row input, #roomSection .filter-row select')) {
+                applyFiltersAndSort();
+                renderTables();
+                updateStats();
+                if (currentSection === 'room') renderCharts();
+            } else if (e.target.matches('#patientSection .filter-row input, #patientSection .filter-row select')) {
+                applyFiltersAndSort();
+                renderTables();
+                updateStats();
+                if (currentSection === 'patient') renderCharts();
+            }
+        });
+
+        // Event listeners for sorting
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.header-row th')) {
+                const th = e.target.closest('.header-row th');
+                const column = th.dataset.sort;
+                const sectionType = th.closest('.section-content').id;
+
+                if (sectionType === 'roomSection') {
+                    if (roomSort.column === column) {
+                        roomSort.direction = roomSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        roomSort.column = column;
+                        roomSort.direction = 'asc';
+                    }
+                } else if (sectionType === 'patientSection') {
+                    if (patientSort.column === column) {
+                        patientSort.direction = patientSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        patientSort.column = column;
+                        patientSort.direction = 'asc';
+                    }
+                }
+
+                // Update sort icons
+                document.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.classList.remove('sort-asc', 'sort-desc');
+                });
+
+                const icon = th.querySelector('.sort-icon');
+                if (icon) {
+                    const sortObj = sectionType === 'roomSection' ? roomSort : patientSort;
+                    icon.classList.add(sortObj.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+
+                applyFiltersAndSort();
+                renderTables();
+                updateStats();
+                renderCharts();
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
