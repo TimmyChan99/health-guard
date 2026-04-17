@@ -3,6 +3,8 @@
 
 #include <PubSubClient.h>
 #include <WiFiClientSecure.h>
+#include <WiFiManager.h>
+#include <ESPmDNS.h>
 
 WiFiClientSecure network;
 PubSubClient mqtt(network);
@@ -19,22 +21,53 @@ void connectMqtt() {
     }  
 }
 
+void startMDNS() {
+    if (MDNS.begin("patient-monitor")) {
+        MDNS.addService("http", "tcp", 80);
+        Serial.println("mDNS: patient-monitor.local");
+    }
+}
+
+void startAP() {
+    IPAddress apIP(192, 168, 4, 1);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP("Hospital_Device2", "12345678");
+    Serial.println("AP Started: patient-monitor.local");
+    
+    startMDNS();
+}
+
 void connectWifi() {
     Serial.println("Connecting to WiFi...");
+    Serial.println("=========================================");
+    Serial.println("WiFi Credentials will be configured via");
+    Serial.println("the built-in WiFiManager portal.");
+    Serial.println("=========================================");
+    Serial.println("\n[INFO] If no saved credentials, portal opens");
+    Serial.println("[INFO] Connect to 'Hospital_Device2' AP");
+    Serial.println("[INFO] Then open browser to patient-monitor.local");
 
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.println('.');
-        delay(500);
+    WiFiManager wm;
+    
+    IPAddress apIP(192, 168, 4, 1);
+    wm.setAPStaticIPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    wm.setConfigPortalTimeout(180);
+    wm.setDebugOutput(true);
+    
+    bool res = wm.autoConnect("Hospital_Device2", "12345678");
+    
+    if (!res) {
+        Serial.println("\n[FAILED] Could not connect to WiFi");
+        Serial.println("[INFO] Starting config portal...");
+        wm.startConfigPortal("Hospital_Device2", "12345678");
     }
     
-    Serial.println("Wifi connected");
+    Serial.print("\nWiFi connected: ");
+    Serial.println(WiFi.SSID());
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
 
-    WiFi.softAP("Hospital_Device", "12345678");
-    Serial.println("Access Point Started");
-    Serial.println(WiFi.softAPIP());
-
+    startAP();
 
     network.setInsecure();
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
