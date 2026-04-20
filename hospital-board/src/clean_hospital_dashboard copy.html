@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hospital Environment Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+        :root {
+            --bg-layer0: #F1F5F9;
+            --bg-card: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-muted: #64748B;
+            --border-card: rgba(15, 23, 42, 0.08);
+            --primary-teal: #0D9488;
+            --primary-blue: #0284C7;
+            --slate: #475569;
+            --alert-red: #DC2626;
+            --grid-gutter: 24px;
+            --radius-card: 16px;
+            --radius-input: 8px;
+            --radius-pill: 999px;
+            --shadow-card: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-layer0);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .app-shell {
+                padding: 24px 16px;
+            }
+        }
+
+        .global-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-start;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 0 0 4px;
+        }
+
+        .global-header h1 {
+            margin: 4px 0 8px;
+            font-size: clamp(1.9rem, 2.2vw, 2.6rem);
+            line-height: 1.2;
+        }
+
+        .global-header p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .segmented-control {
+            position: relative;
+            background: #E2E8F0;
+            border-radius: var(--radius-pill);
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .segment-indicator {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            height: calc(100% - 8px);
+            background: var(--bg-card);
+            border-radius: var(--radius-pill);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+            transition: transform 0.2s ease, width 0.2s ease;
+            width: 0;
+            pointer-events: none;
+        }
+
+        .segmented-option {
+            position: relative;
+            z-index: 1;
+            border: none;
+            background: transparent;
+            padding: 6px 20px;
+            border-radius: var(--radius-pill);
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            font-weight: 600;
+            color: var(--slate);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .segmented-option svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .segmented-option.active {
+            color: var(--text-primary);
+        }
+
+        .section-content {
+            display: none;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        .content-layer {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            padding: 20px;
+            border: 1px solid rgba(15, 23, 42, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card.critical::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--radius-card);
+            background: radial-gradient(circle at 20% 20%, rgba(220, 38, 38, 0.25), transparent 55%);
+            animation: criticalPulse 2s ease-in-out infinite;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        .metric-card.critical {
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+
+        .metric-card.alert {
+            border-color: #DC2626;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+        }
+
+        .metric-card.alert .metric-value {
+            color: #DC2626;
+        }
+
+        .metric-card .metric-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .metric-label {
+            margin: 0 0 4px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-family: 'Roboto Mono', 'Inter', monospace;
+            font-size: clamp(1.8rem, 2vw, 2.3rem);
+            margin: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .metric-value span {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .status-pill {
+            background: #DCFCE7;
+            color: #166534;
+            border-radius: var(--radius-pill);
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            border: 1px solid #BBF7D0;
+            font-weight: 600;
+        }
+
+        .metric-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .metric-trend {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .micro-spark {
+            width: 80px;
+            height: 30px;
+        }
+
+        .sparkline {
+            width: 100%;
+            height: 60px;
+        }
+
+        .sparkline-path {
+            stroke: currentColor;
+            stroke-width: 1.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .delta {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .chart-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-card);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .chart-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .chart-header p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .legend-pill {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-flex;
+        }
+
+        .chart-row {
+            padding: 0 28px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chart-row:not(:last-child) {
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .chart-row-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chart-title {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .chart-value {
+            margin: 2px 0 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-caption {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .chart-caption span:first-child {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-row svg {
+            width: 100%;
+            height: 150px;
+            display: block;
+        }
+
+        .area-path {
+            opacity: 0.6;
+        }
+
+        .line-path {
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .table-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-card);
+            padding: 24px;
+        }
+
+        .table-section h2 {
+            margin: 4px 0 4px;
+        }
+
+        .table-section p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .filter-ribbon {
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 10px 0 20px;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .filter-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .filter-controls input,
+        .filter-controls select {
+            border: none;
+            border-radius: var(--radius-input);
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            background: #fff;
+            color: var(--text-primary);
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .filter-controls input:focus,
+        .filter-controls select:focus {
+            outline: none;
+            border-color: var(--primary-teal);
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+        }
+
+        .filter-controls button {
+            border: none;
+            border-radius: var(--radius-input);
+            padding: 10px 16px;
+            background: var(--primary-teal);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .filter-controls button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(13, 148, 136, 0.25);
+        }
+
+        .live-sync {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #0D9488;
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            position: relative;
+        }
+
+        .live-dot::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            animation: livePulse 1.6s infinite ease-out;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        .data-table thead {
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .data-table th {
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 12px 12px;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .data-table tbody tr:hover {
+            background: #F8FAFC;
+        }
+
+        .data-table tr.alert {
+            border-left: 4px solid #F87171;
+            background: #FEF2F2;
+        }
+
+        .data-table th {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .data-table th:hover {
+            background: #F1F5F9;
+        }
+
+        .data-table th .sort-icon {
+            margin-left: 4px;
+            font-size: 0.75rem;
+            color: #64748B;
+        }
+
+        .data-table th .sort-icon.fa-sort-up {
+            color: #0D9488;
+            font-weight: bold;
+        }
+
+        .data-table th .sort-icon.fa-sort-down {
+            color: #0D9488;
+            font-weight: bold;
+        }
+
+        .table-status {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .table-status.normal {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .table-status.alert {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .table-footer {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .alert-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--alert-red);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes criticalPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+            }
+        }
+
+        @keyframes livePulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.4;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .chart-row {
+                padding: 0 18px 16px;
+            }
+
+            .chart-row svg {
+                height: 120px;
+            }
+
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .segmented-option {
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <header class="global-header">
+            <div>
+                <h1>Smart Hospital Environment Monitor</h1>
+                <p>Real-time environmental monitoring for patient safety & room conditions</p>
+            </div>
+            <div class="segmented-control" role="tablist">
+                <div class="segment-indicator"></div>
+                <button type="button" class="segmented-option active" id="patientSectionBtn" data-view="patient" role="tab" aria-selected="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 4a3 3 0 0 1 3 3v1a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3Z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6 21v-2c0-2.5 2-4.5 4.5-4.5h3c2.5 0 4.5 2 4.5 4.5v2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Patient</span>
+                </button>
+                <button type="button" class="segmented-option" id="roomSectionBtn" data-view="room" role="tab" aria-selected="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 11l8-7 8 7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M4 11v9h16v-9" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 22V12h6v10" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Room</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="content-layer">
+            <!-- Room Environment Section -->
+            <section id="roomSection" class="section-content">
+                <section class="hero-grid" id="roomStats">
+                    <article class="metric-card" data-metric="temperature">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Room Temperature</p>
+                                <div class="metric-value" data-metric-value>--<span>°C</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- °C</p>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="humidity">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Room Humidity</p>
+                                <div class="metric-value" data-metric-value>--<span>%</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- %</p>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="pressure">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Room Pressure</p>
+                                <div class="metric-value" data-metric-value>--<span>hPa</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- hPa</p>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Room Environment Trends</h2>
+                            <p>Real-time monitoring of environmental conditions</p>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-pill"><span class="legend-dot" style="background:#0D9488;"></span>Temperature</span>
+                            <span class="legend-pill"><span class="legend-dot" style="background:#0284C7;"></span>Humidity</span>
+                            <span class="legend-pill"><span class="legend-dot" style="background:#DC2626;"></span>Pressure</span>
+                        </div>
+                    </div>
+                    <div class="chart-row" data-metric="temperature">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Temperature</p>
+                                <p class="chart-value">-- °C</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Room Range</span>
+                                <span>18 – 25 °C</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-room-temp" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#0D9488" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#0D9488" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-room-temp)" d=""></path>
+                            <path class="line-path" stroke="#0D9488" d=""></path>
+                        </svg>
+                    </div>
+                    <div class="chart-row" data-metric="humidity">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Humidity</p>
+                                <p class="chart-value">-- %</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Comfort Range</span>
+                                <span>30 – 60 %</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-room-humidity" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#0284C7" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#0284C7" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-room-humidity)" d=""></path>
+                            <path class="line-path" stroke="#0284C7" d=""></path>
+                        </svg>
+                    </div>
+                    <div class="chart-row" data-metric="pressure">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Pressure</p>
+                                <p class="chart-value">-- hPa</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Atmospheric</span>
+                                <span>980 – 1040 hPa</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-room-pressure" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#DC2626" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#DC2626" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-room-pressure)" d=""></path>
+                            <path class="line-path" stroke="#DC2626" d=""></path>
+                        </svg>
+                    </div>
+                </section>
+
+                <section class="table-section">
+                    <div>
+                        <p class="eyebrow">Information</p>
+                        <h2>Room Data Records</h2>
+                        <p>Historical data of room environmental readings</p>
+                    </div>
+                    <div class="filter-ribbon">
+                        <div class="filter-controls" id="roomFilters">
+                            <input type="text" placeholder="Device ID" data-column="device_id">
+                            <input type="text" placeholder="Temperature" data-column="temperature">
+                            <input type="text" placeholder="Humidity" data-column="humidity">
+                            <input type="text" placeholder="Pressure" data-column="pressure">
+                            <select data-column="alert_status">
+                                <option value="">All Status</option>
+                                <option value="NORMAL">NORMAL</option>
+                                <option value="ALERT">ALERT</option>
+                            </select>
+                            <button type="button" onclick="applyFiltersAndSort()">Filter</button>
+                            <button type="button" onclick="resetRoomFilters()">Reset</button>
+                            <button type="button" onclick="refreshData()">Refresh</button>
+                        </div>
+                        <div class="live-sync">
+                            <span class="live-dot"></span>
+                            <span id="roomLastUpdate">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="roomTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="device_id" onclick="sortTable('room', 'device_id')">Device ID <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="temperature" onclick="sortTable('room', 'temperature')">Temperature (°C) <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="humidity" onclick="sortTable('room', 'humidity')">Humidity (%) <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="pressure" onclick="sortTable('room', 'pressure')">Pressure (hPa) <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="alert_status" onclick="sortTable('room', 'alert_status')">Status <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="recorded_at" onclick="sortTable('room', 'recorded_at')">Recorded At <i class="fas fa-sort sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="roomBody">
+                                <tr>
+                                    <td colspan="6" class="no-data">
+                                        <div>Loading room data...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer">
+                        <span class="pagination-label" id="roomFooter">Showing 0 entries</span>
+                    </div>
+                </section>
+            </section>
+
+            <!-- Patient Environment Section -->
+            <section id="patientSection" class="section-content active">
+                <section class="hero-grid" id="patientStats">
+                    <article class="metric-card" data-metric="temperature">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Core Temperature</p>
+                                <div class="metric-value" data-metric-value>--<span>°C</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- °C</p>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="humidity">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Surface Humidity</p>
+                                <div class="metric-value" data-metric-value>--<span>%</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- %</p>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="pressure">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Pressure</p>
+                                <div class="metric-value" data-metric-value>--<span>hPa</span></div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                        <div class="metric-card-body">
+                            <div class="metric-trend">
+                                <svg class="micro-spark" viewBox="0 0 84 32" data-role="micro" aria-hidden="true">
+                                    <path class="sparkline-path"></path>
+                                </svg>
+                            </div>
+                            <p class="delta" data-delta>Avg: -- hPa</p>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="fall">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Fall Detection</p>
+                                <div class="metric-value" data-metric-value>--</div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                    </article>
+                    <article class="metric-card" data-metric="emergency">
+                        <div class="metric-card-head">
+                            <div>
+                                <p class="metric-label" data-metric-name>Emergency</p>
+                                <div class="metric-value" data-metric-value>--</div>
+                            </div>
+                            <span class="status-pill" data-status>NORMAL</span>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Patient Vital Trends</h2>
+                            <p>Real-time monitoring of patient conditions</p>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-pill"><span class="legend-dot" style="background:#0D9488;"></span>Temperature</span>
+                            <span class="legend-pill"><span class="legend-dot" style="background:#0284C7;"></span>Humidity</span>
+                            <span class="legend-pill"><span class="legend-dot" style="background:#DC2626;"></span>Pressure</span>
+                        </div>
+                    </div>
+                    <div class="chart-row" data-metric="temperature">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Temperature</p>
+                                <p class="chart-value">-- °C</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Biological Range</span>
+                                <span>36 – 38 °C</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-patient-temp" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#0D9488" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#0D9488" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-patient-temp)" d=""></path>
+                            <path class="line-path" stroke="#0D9488" d=""></path>
+                        </svg>
+                    </div>
+                    <div class="chart-row" data-metric="humidity">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Humidity</p>
+                                <p class="chart-value">-- %</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Surface Range</span>
+                                <span>40 – 60 %</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-patient-humidity" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#0284C7" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#0284C7" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-patient-humidity)" d=""></path>
+                            <path class="line-path" stroke="#0284C7" d=""></path>
+                        </svg>
+                    </div>
+                    <div class="chart-row" data-metric="pressure">
+                        <div class="chart-row-label">
+                            <div>
+                                <p class="chart-title">Pressure</p>
+                                <p class="chart-value">-- hPa</p>
+                            </div>
+                            <div class="chart-caption">
+                                <span>Environmental</span>
+                                <span>980 – 1040 hPa</span>
+                            </div>
+                        </div>
+                        <svg viewBox="0 0 720 160" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="gradient-patient-pressure" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#DC2626" stop-opacity="0.25"></stop>
+                                    <stop offset="100%" stop-color="#DC2626" stop-opacity="0"></stop>
+                                </linearGradient>
+                            </defs>
+                            <path class="area-path" fill="url(#gradient-patient-pressure)" d=""></path>
+                            <path class="line-path" stroke="#DC2626" d=""></path>
+                        </svg>
+                    </div>
+                </section>
+
+                <section class="table-section">
+                    <div>
+                        <p class="eyebrow">Information</p>
+                        <h2>Patient Data Records</h2>
+                        <p>Historical data of patient readings and alerts</p>
+                    </div>
+                    <div class="filter-ribbon">
+                        <div class="filter-controls" id="patientFilters">
+                            <input type="text" placeholder="Date/Time" data-column="date">
+                            <input type="text" placeholder="Device ID" data-column="device_id">
+                            <input type="text" placeholder="Temperature" data-column="temperature">
+                            <input type="text" placeholder="Humidity" data-column="humidity">
+                            <input type="text" placeholder="Pressure" data-column="pressure">
+                            <select data-column="chute_detectee">
+                                <option value="">Fall Status</option>
+                                <option value="TRUE">TRUE</option>
+                                <option value="FALSE">FALSE</option>
+                            </select>
+                            <select data-column="bouton_urgence">
+                                <option value="">Emergency</option>
+                                <option value="TRUE">TRUE</option>
+                                <option value="FALSE">FALSE</option>
+                            </select>
+                            <button type="button" onclick="applyFiltersAndSort()">Filter</button>
+                            <button type="button" onclick="resetPatientFilters()">Reset</button>
+                            <button type="button" onclick="refreshData()">Refresh</button>
+                        </div>
+                        <div class="live-sync">
+                            <span class="live-dot"></span>
+                            <span id="patientLastUpdate">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="patientTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="date" onclick="sortTable('patient', 'date')">Date/Time <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="device_id" onclick="sortTable('patient', 'device_id')">Device ID <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="temperature" onclick="sortTable('patient', 'temperature')">Temperature <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="humidity" onclick="sortTable('patient', 'humidity')">Humidity <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="pressure" onclick="sortTable('patient', 'pressure')">Pressure <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="chute_detectee" onclick="sortTable('patient', 'chute_detectee')">Fall <i class="fas fa-sort sort-icon"></i></th>
+                                    <th data-sort="bouton_urgence" onclick="sortTable('patient', 'bouton_urgence')">Emergency <i class="fas fa-sort sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="patientBody">
+                                <tr>
+                                    <td colspan="7" class="no-data">
+                                        <div>Loading patient data...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer">
+                        <span class="pagination-label" id="patientFooter">Showing 0 entries</span>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <!-- Alert Modal -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="alertModalLabel"><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="alertModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const metricPalette = {
+            temperature: '#0D9488',
+            humidity: '#0284C7',
+            pressure: '#DC2626'
+        };
+
+        const metricUnits = {
+            temperature: '°C',
+            humidity: '%',
+            pressure: 'hPa'
+        };
+
+        const chartConfig = {
+            width: 720,
+            height: 160,
+            padding: 28
+        };
+
+        // Google Sheets CSV URLs
+        const ROOM_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRN82NPqGXfRU-PqGypyfZzQ9W0hLIuvwmA1fPj1inXg6pclZcQgna9jxJT-NJ3c-OekHiNE0lDOPiG/pub?gid=0&output=csv';
+        const PATIENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRN82NPqGXfRU-PqGypyfZzQ9W0hLIuvwmA1fPj1inXg6pclZcQgna9jxJT-NJ3c-OekHiNE0lDOPiG/pub?gid=1325091331&output=csv';
+
+        let roomData = [];
+        let patientData = [];
+        let filteredRoomData = [];
+        let filteredPatientData = [];
+        let roomSort = { column: null, direction: 'asc' };
+        let patientSort = { column: null, direction: 'asc' };
+        let activeAlerts = [];
+        let currentSection = 'patient';
+        let isApplyingFilters = false;
+
+        function parseRoomDate(dateStr) {
+            if (!dateStr) return new Date();
+            const parts = dateStr.split(' ');
+            if (parts.length !== 2) return new Date();
+            const dateParts = parts[0].split('/');
+            const timeParts = parts[1].split(':');
+            if (dateParts.length !== 3 || timeParts.length !== 3) return new Date();
+            return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+        }
+
+        async function loadCSVData(url, type) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Failed to load ${type} data`);
+
+            const csvText = await response.text();
+            const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
+
+            if (lines.length < 2) throw new Error(`No valid data in ${type} CSV`);
+
+            const headers = lines[0].split(',').map(h => h.trim());
+
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                if (Object.values(obj).some(v => v)) {
+                    data.push(obj);
+                }
+            }
+
+            if (type === 'room') {
+                roomData = data;
+            } else if (type === 'patient') {
+                patientData = data;
+            }
+        }
+
+        async function init() {
+            console.log('[INFO] Loading data from Google Sheets...');
+            
+            try {
+                await loadCSVData(ROOM_SHEET_URL, 'room');
+                console.log(`[OK] Loaded ${roomData.length} room records`);
+            } catch (error) {
+                console.error('[ERROR] Failed to load room data:', error);
+            }
+
+            try {
+                await loadCSVData(PATIENT_SHEET_URL, 'patient');
+                console.log(`[OK] Loaded ${patientData.length} patient records`);
+            } catch (error) {
+                console.error('[ERROR] Failed to load patient data:', error);
+                // Fallback: adapt room data to patient format
+                console.warn('[WARN] Using adapted room data as patient data');
+                patientData = roomData.map(row => ({
+                    date: row.recorded_at,
+                    device_id: row.device_id,
+                    temperature: row.temperature,
+                    humidity: row.humidity,
+                    pressure: row.pressure,
+                    chute_detectee: row.alert_status === 'ALERT' ? 'TRUE' : 'FALSE',
+                    bouton_urgence: 'FALSE'
+                }));
+            }
+
+filteredRoomData = [...roomData];
+            filteredPatientData = [...patientData];
+
+            filterAndSortData();
+            checkForAlerts();
+            renderTables();
+            updateStats();
+            renderCharts();
+            initSegmentedControl();
+            updateSortIcons('room');
+            updateSortIcons('patient');
+            
+            console.log('[OK] Dashboard initialized');
+        }
+
+        // Refresh data from Google Sheets - only when manually triggered
+        window.refreshData = async function() {
+            console.log('[INFO] Refreshing data from Google Sheets...');
+            
+            try {
+                await loadCSVData(ROOM_SHEET_URL, 'room');
+                console.log(`[OK] Refreshed ${roomData.length} room records`);
+            } catch (error) {
+                console.error('[ERROR] Failed to refresh room data:', error);
+            }
+            
+            try {
+                await loadCSVData(PATIENT_SHEET_URL, 'patient');
+                console.log(`[OK] Refreshed ${patientData.length} patient records`);
+            } catch (error) {
+                console.error('[ERROR] Failed to refresh patient data:', error);
+            }
+            
+            filteredRoomData = [...roomData];
+            filteredPatientData = [...patientData];
+            filterAndSortData();
+            renderTables();
+            updateStats();
+            renderCharts();
+            checkForAlerts();
+            updateSortIcons('room');
+            updateSortIcons('patient');
+            
+            // Update timestamp
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const roomEl = document.getElementById('roomLastUpdate');
+            const patientEl = document.getElementById('patientLastUpdate');
+            if (roomEl) roomEl.textContent = 'Updated: ' + timeStr;
+            if (patientEl) patientEl.textContent = 'Updated: ' + timeStr;
+            console.log('[OK] Data refreshed at', timeStr);
+        }
+
+        // Export functions to window for button onclick handlers
+        window.applyFiltersAndSort = function() {
+            if (isApplyingFilters) return;
+            isApplyingFilters = true;
+            
+            filteredRoomData = [...roomData];
+            filteredPatientData = [...patientData];
+            filterAndSortData();
+            renderTables();
+            updateStats();
+            renderCharts();
+            updateSortIcons('room');
+            updateSortIcons('patient');
+            
+            setTimeout(() => { isApplyingFilters = false; }, 100);
+        };
+
+        window.resetRoomFilters = function() {
+            document.querySelectorAll('#roomFilters input').forEach(input => input.value = '');
+            document.querySelectorAll('#roomFilters select').forEach(select => select.selectedIndex = 0);
+            roomSort.column = null;
+            roomSort.direction = 'asc';
+            filteredRoomData = [...roomData];
+            filterAndSortData();
+            renderTables();
+            updateStats();
+            renderCharts();
+            updateSortIcons('room');
+        };
+
+        window.resetPatientFilters = function() {
+            document.querySelectorAll('#patientFilters input').forEach(input => input.value = '');
+            document.querySelectorAll('#patientFilters select').forEach(select => select.selectedIndex = 0);
+            patientSort.column = null;
+            patientSort.direction = 'asc';
+            filteredPatientData = [...patientData];
+            filterAndSortData();
+            renderTables();
+            updateStats();
+            renderCharts();
+            updateSortIcons('patient');
+        };
+
+        window.sortTable = function(tableType, column) {
+            if (tableType === 'room') {
+                if (roomSort.column === column) {
+                    roomSort.direction = roomSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    roomSort.column = column;
+                    roomSort.direction = 'asc';
+                }
+            } else {
+                if (patientSort.column === column) {
+                    patientSort.direction = patientSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    patientSort.column = column;
+                    patientSort.direction = 'asc';
+                }
+            }
+            filterAndSortData();
+            renderTables();
+            updateStats();
+            renderCharts();
+            updateSortIcons(tableType);
+        };
+
+        function updateSortIcons(tableType) {
+            const table = document.getElementById(tableType + 'Table');
+            if (!table) return;
+            table.querySelectorAll('th').forEach(th => {
+                const col = th.dataset.sort;
+                if (!col) return;
+                const isActive = (tableType === 'room' && col === roomSort.column) || (tableType === 'patient' && col === patientSort.column);
+                const direction = tableType === 'room' ? roomSort.direction : patientSort.direction;
+                
+                // Update header styling
+                if (isActive) {
+                    th.style.fontWeight = 'bold';
+                    th.style.color = '#0D9488';
+                } else {
+                    th.style.fontWeight = 'normal';
+                    th.style.color = '';
+                }
+            });
+            
+            // Update sort icons after DOM update
+            setTimeout(() => {
+                table.querySelectorAll('th').forEach(th => {
+                    const col = th.dataset.sort;
+                    if (!col) return;
+                    const icon = th.querySelector('.sort-icon');
+                    if (!icon) return;
+                    const isActive = (tableType === 'room' && col === roomSort.column) || (tableType === 'patient' && col === patientSort.column);
+                    const direction = tableType === 'room' ? roomSort.direction : patientSort.direction;
+                    
+                    icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+                    if (isActive) {
+                        icon.classList.add(direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+                        icon.style.color = '#0D9488';
+                    } else {
+                        icon.classList.add('fa-sort');
+                        icon.style.color = '';
+                    }
+                });
+            }, 10);
+        }
+
+        function filterAndSortData() {
+            // Room filtering
+            filteredRoomData = roomData.filter(row => {
+                const filters = document.querySelectorAll('#roomFilters input, #roomFilters select');
+                return Array.from(filters).every(filter => {
+                    const column = filter.dataset.column;
+                    const value = filter.value.toLowerCase();
+                    if (!value) return true;
+                    return String(row[column] || '').toLowerCase().includes(value);
+                });
+            });
+
+            // Patient filtering
+            filteredPatientData = patientData.filter(row => {
+                const filters = document.querySelectorAll('#patientFilters input, #patientFilters select');
+                return Array.from(filters).every(filter => {
+                    const column = filter.dataset.column;
+                    const value = filter.value.toLowerCase();
+                    if (!value) return true;
+                    return String(row[column] || '').toLowerCase().includes(value);
+                });
+            });
+
+            // Room sorting
+            if (roomSort.column) {
+                filteredRoomData.sort((a, b) => {
+                    const aVal = a[roomSort.column] || '';
+                    const bVal = b[roomSort.column] || '';
+                    let result = 0;
+                    if (roomSort.column === 'temperature' || roomSort.column === 'humidity' || roomSort.column === 'pressure') {
+                        result = parseFloat(aVal) - parseFloat(bVal);
+                    } else {
+                        result = String(aVal).localeCompare(String(bVal));
+                    }
+                    return roomSort.direction === 'asc' ? result : -result;
+                });
+            }
+
+            // Patient sorting
+            if (patientSort.column) {
+                filteredPatientData.sort((a, b) => {
+                    const aVal = a[patientSort.column] || '';
+                    const bVal = b[patientSort.column] || '';
+                    let result = 0;
+                    if (patientSort.column === 'temperature' || patientSort.column === 'humidity' || patientSort.column === 'pressure') {
+                        result = parseFloat(aVal) - parseFloat(bVal);
+                    } else if (patientSort.column === 'date') {
+                        result = new Date(aVal) - new Date(bVal);
+                    } else {
+                        result = String(aVal).localeCompare(String(bVal));
+                    }
+                    return patientSort.direction === 'asc' ? result : -result;
+                });
+            }
+        }
+
+        function initSegmentedControl() {
+            const segmentControl = document.querySelector('.segmented-control');
+            const segmentButtons = document.querySelectorAll('.segmented-option');
+            const segmentIndicator = document.querySelector('.segment-indicator');
+
+            function moveIndicator(button) {
+                const parentRect = segmentControl.getBoundingClientRect();
+                const rect = button.getBoundingClientRect();
+                const left = rect.left - parentRect.left;
+                segmentIndicator.style.width = `${rect.width}px`;
+                segmentIndicator.style.transform = `translateX(${left}px)`;
+            }
+
+            segmentButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const viewKey = this.dataset.view;
+                    if (viewKey === currentSection) return;
+                    
+                    currentSection = viewKey;
+                    segmentButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    this.setAttribute('aria-selected', 'true');
+                    segmentButtons.forEach(btn => {
+                        if (btn !== this) {
+                            btn.setAttribute('aria-selected', 'false');
+                        }
+                    });
+                    
+                    moveIndicator(this);
+                    switchSection(viewKey);
+                });
+            });
+
+            window.addEventListener('resize', () => {
+                const activeButton = document.querySelector('.segmented-option.active');
+                if (activeButton) moveIndicator(activeButton);
+            });
+
+            const initialButton = document.querySelector('.segmented-option.active');
+            if (initialButton) moveIndicator(initialButton);
+        }
+
+        function switchSection(section) {
+            document.getElementById('roomSectionBtn').classList.toggle('active', section === 'room');
+            document.getElementById('patientSectionBtn').classList.toggle('active', section === 'patient');
+            document.getElementById('roomSection').classList.toggle('active', section === 'room');
+            document.getElementById('patientSection').classList.toggle('active', section === 'patient');
+
+            checkForAlerts();
+            renderCharts();
+            updateStats();
+        }
+
+        function checkForAlerts() {
+            activeAlerts = [];
+
+            if (currentSection === 'room') {
+                const latestRoomAlert = roomData.slice(-1)[0];
+                if (latestRoomAlert && latestRoomAlert.alert_status === 'ALERT') {
+                    activeAlerts.push({
+                        type: 'room',
+                        title: 'Room Environment Alert',
+                        device: latestRoomAlert.device_id,
+                        timestamp: latestRoomAlert.recorded_at,
+                        details: {
+                            temperature: `${parseFloat(latestRoomAlert.temperature || 0).toFixed(2)}°C`,
+                            humidity: `${parseFloat(latestRoomAlert.humidity || 0).toFixed(2)}%`,
+                            pressure: `${parseFloat(latestRoomAlert.pressure || 0).toFixed(2)} hPa`,
+                            status: latestRoomAlert.alert_status
+                        }
+                    });
+                }
+            } else if (currentSection === 'patient') {
+                const latestPatientAlert = patientData.slice(-1)[0];
+                if (latestPatientAlert) {
+                    if (latestPatientAlert.chute_detectee === 'TRUE') {
+                        activeAlerts.push({
+                            type: 'patient',
+                            title: 'Patient Fall Detection Alert',
+                            device: latestPatientAlert.device_id,
+                            timestamp: new Date(latestPatientAlert.date).toLocaleString(),
+                            details: {
+                                temperature: `${parseFloat(latestPatientAlert.temperature || 0).toFixed(2)}°C`,
+                                humidity: `${parseFloat(latestPatientAlert.humidity || 0).toFixed(2)}%`,
+                                pressure: `${parseFloat(latestPatientAlert.pressure || 0).toFixed(2)} hPa`,
+                                alert_type: 'Fall Detected'
+                            }
+                        });
+                    }
+                    if (latestPatientAlert.bouton_urgence === 'TRUE') {
+                        activeAlerts.push({
+                            type: 'patient',
+                            title: 'Patient Emergency Alert',
+                            device: latestPatientAlert.device_id,
+                            timestamp: new Date(latestPatientAlert.date).toLocaleString(),
+                            details: {
+                                temperature: `${parseFloat(latestPatientAlert.temperature || 0).toFixed(2)}°C`,
+                                humidity: `${parseFloat(latestPatientAlert.humidity || 0).toFixed(2)}%`,
+                                pressure: `${parseFloat(latestPatientAlert.pressure || 0).toFixed(2)} hPa`,
+                                alert_type: 'Emergency Button Pressed'
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (activeAlerts.length > 0) {
+                showAlertBadge();
+            } else {
+                hideAlertBadge();
+            }
+        }
+
+        function showAlertBadge() {
+            let badge = document.getElementById('alertBadge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'alertBadge';
+                badge.className = 'alert-badge';
+                badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${activeAlerts.length} Active Alert${activeAlerts.length > 1 ? 's' : ''}`;
+                badge.onclick = showAlertModal;
+                document.body.appendChild(badge);
+            }
+            badge.style.display = 'block';
+        }
+
+        function hideAlertBadge() {
+            const badge = document.getElementById('alertBadge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+
+        function showAlertModal() {
+            const modalBody = document.getElementById('alertModalBody');
+            modalBody.innerHTML = activeAlerts.map(alert => `
+                <div class="alert alert-danger mb-3">
+                    <h6 class="alert-heading mb-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${alert.title}
+                    </h6>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <strong>Device:</strong> ${alert.device}<br>
+                            <strong>Time:</strong> ${alert.timestamp}<br>
+                            ${alert.details.alert_type ? `<strong>Alert Type:</strong> ${alert.details.alert_type}<br>` : ''}
+                        </div>
+                        <div class="col-sm-6">
+                            <strong>Temperature:</strong> ${alert.details.temperature}<br>
+                            <strong>Humidity:</strong> ${alert.details.humidity}<br>
+                            <strong>Pressure:</strong> ${alert.details.pressure}<br>
+                            ${alert.details.status ? `<strong>Status:</strong> ${alert.details.status}<br>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            const modal = new bootstrap.Modal(document.getElementById('alertModal'));
+            modal.show();
+        }
+
+        function renderTables() {
+            const roomBody = document.getElementById('roomBody');
+            if (filteredRoomData.length === 0) {
+                roomBody.innerHTML = '<tr><td colspan="6" class="no-data"><div>No room data found</div></td></tr>';
+            } else {
+                // Show newest first (reverse order)
+                const roomDataReversed = [...filteredRoomData].reverse();
+                roomBody.innerHTML = roomDataReversed.slice(0, 50).map(row => `
+                    <tr class="${row.alert_status === 'ALERT' ? 'alert' : ''}">
+                        <td><strong>${row.device_id || ''}</strong></td>
+                        <td>${parseFloat(row.temperature || 0).toFixed(2)}°C</td>
+                        <td>${parseFloat(row.humidity || 0).toFixed(2)}%</td>
+                        <td>${parseFloat(row.pressure || 0).toFixed(2)} hPa</td>
+                        <td><span class="table-status ${row.alert_status === 'NORMAL' ? 'normal' : 'alert'}">${row.alert_status || ''}</span></td>
+                        <td><small>${row.recorded_at || ''}</small></td>
+                    </tr>
+                `).join('');
+            }
+            document.getElementById('roomFooter').textContent = `Showing ${filteredRoomData.length} entries`;
+
+            const patientBody = document.getElementById('patientBody');
+            if (filteredPatientData.length === 0) {
+                patientBody.innerHTML = '<tr><td colspan="7" class="no-data"><div>No patient data found</div></td></tr>';
+            } else {
+                // Show newest first (reverse order)
+                const patientDataReversed = [...filteredPatientData].reverse();
+                patientBody.innerHTML = patientDataReversed.slice(0, 50).map(row => {
+                    const fallStatus = row.chute_detectee === 'TRUE' ? 'alert' : 'normal';
+                    const emergencyStatus = row.bouton_urgence === 'TRUE' ? 'alert' : 'normal';
+                    return `
+                        <tr>
+                            <td><small>${row.date ? new Date(row.date).toLocaleString() : ''}</small></td>
+                            <td><strong>${row.device_id || ''}</strong></td>
+                            <td>${parseFloat(row.temperature || 0).toFixed(2)}°C</td>
+                            <td>${parseFloat(row.humidity || 0).toFixed(2)}%</td>
+                            <td>${parseFloat(row.pressure || 0).toFixed(2)} hPa</td>
+                            <td><span class="table-status ${fallStatus}">${row.chute_detectee || ''}</span></td>
+                            <td><span class="table-status ${emergencyStatus}">${row.bouton_urgence || ''}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            document.getElementById('patientFooter').textContent = `Showing ${filteredPatientData.length} entries`;
+        }
+
+        function updateStats() {
+            if (currentSection === 'room') {
+                updateRoomStats();
+            } else {
+                updatePatientStats();
+            }
+        }
+
+        function updateRoomStats() {
+            const heroCards = document.querySelectorAll('#roomStats .metric-card');
+            
+            if (filteredRoomData.length > 0) {
+                // Use last record (most recent) since data might be sorted oldest-first
+                const latestRoom = filteredRoomData[filteredRoomData.length - 1];
+                const avgTemp = filteredRoomData.reduce((a, b) => a + parseFloat(b.temperature || 0), 0) / filteredRoomData.length;
+                const avgHumidity = filteredRoomData.reduce((a, b) => a + parseFloat(b.humidity || 0), 0) / filteredRoomData.length;
+                const avgPressure = filteredRoomData.reduce((a, b) => a + parseFloat(b.pressure || 0), 0) / filteredRoomData.length;
+
+                heroCards.forEach(card => {
+                    const key = card.dataset.metric;
+                    const valueEl = card.querySelector('[data-metric-value]');
+                    const statusEl = card.querySelector('[data-status]');
+                    const deltaEl = card.querySelector('[data-delta]');
+
+                    if (key === 'temperature' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestRoom.temperature || 0).toFixed(1)}<span>°C</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgTemp.toFixed(1)} °C`;
+                    } else if (key === 'humidity' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestRoom.humidity || 0).toFixed(1)}<span>%</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgHumidity.toFixed(1)} %`;
+                    } else if (key === 'pressure' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestRoom.pressure || 0).toFixed(1)}<span>hPa</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgPressure.toFixed(1)} hPa`;
+                    }
+
+                    if (statusEl) {
+                        const status = latestRoom.alert_status || 'NORMAL';
+                        statusEl.textContent = status;
+                        if (status === 'ALERT') {
+                            statusEl.style.background = '#fee2e2';
+                            statusEl.style.borderColor = '#fecaca';
+                            statusEl.style.color = '#991b1b';
+                            card.classList.add('critical');
+                            card.classList.add('alert');
+                        } else {
+                            statusEl.style.background = '#DCFCE7';
+                            statusEl.style.borderColor = '#BBF7D0';
+                            statusEl.style.color = '#166534';
+                            card.classList.remove('critical');
+                            card.classList.remove('alert');
+                        }
+                    }
+                });
+            }
+        }
+
+        function updatePatientStats() {
+            const heroCards = document.querySelectorAll('#patientStats .metric-card');
+            
+            if (filteredPatientData.length > 0) {
+                // Use last record (most recent) since data might be sorted oldest-first
+                const latestPatient = filteredPatientData[filteredPatientData.length - 1];
+                const avgTemp = filteredPatientData.reduce((a, b) => a + parseFloat(b.temperature || 0), 0) / filteredPatientData.length;
+                const avgHumidity = filteredPatientData.reduce((a, b) => a + parseFloat(b.humidity || 0), 0) / filteredPatientData.length;
+                const avgPressure = filteredPatientData.reduce((a, b) => a + parseFloat(b.pressure || 0), 0) / filteredPatientData.length;
+
+                heroCards.forEach(card => {
+                    const key = card.dataset.metric;
+                    const valueEl = card.querySelector('[data-metric-value]');
+                    const statusEl = card.querySelector('[data-status]');
+                    const deltaEl = card.querySelector('[data-delta]');
+
+                    if (key === 'temperature' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestPatient.temperature || 0).toFixed(1)}<span>°C</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgTemp.toFixed(1)} °C`;
+                    } else if (key === 'humidity' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestPatient.humidity || 0).toFixed(1)}<span>%</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgHumidity.toFixed(1)} %`;
+                    } else if (key === 'pressure' && valueEl) {
+                        valueEl.innerHTML = `${parseFloat(latestPatient.pressure || 0).toFixed(1)}<span>hPa</span>`;
+                        if (deltaEl) deltaEl.textContent = `Avg: ${avgPressure.toFixed(1)} hPa`;
+                    } else if (key === 'fall' && valueEl) {
+                        valueEl.textContent = latestPatient.chute_detectee || 'FALSE';
+                    } else if (key === 'emergency' && valueEl) {
+                        valueEl.textContent = latestPatient.bouton_urgence || 'FALSE';
+                    }
+
+                    if (statusEl) {
+                        let isAlert = false;
+                        
+                        if (key === 'fall') {
+                            isAlert = latestPatient.chute_detectee === 'TRUE';
+                        } else if (key === 'emergency') {
+                            isAlert = latestPatient.bouton_urgence === 'TRUE';
+                        } else if (key === 'temperature') {
+                            isAlert = parseFloat(latestPatient.temperature || 0) > 38;
+                        } else if (key === 'humidity') {
+                            isAlert = parseFloat(latestPatient.humidity || 0) > 60;
+                        }
+                        
+                        if (isAlert) {
+                            statusEl.style.background = '#fee2e2';
+                            statusEl.style.borderColor = '#fecaca';
+                            statusEl.style.color = '#991b1b';
+                            statusEl.textContent = 'ALERT';
+                            card.classList.add('critical');
+                            card.classList.add('alert');
+                        } else {
+                            statusEl.style.background = '#DCFCE7';
+                            statusEl.style.borderColor = '#BBF7D0';
+                            statusEl.style.color = '#166534';
+                            statusEl.textContent = 'NORMAL';
+                            card.classList.remove('critical');
+                            card.classList.remove('alert');
+                        }
+                    }
+                });
+            }
+        }
+
+        function mapDataPoints(data, width, height, padding) {
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = max - min || 1;
+            const step = (width - padding * 2) / (data.length - 1);
+            return data.map((value, index) => {
+                const x = padding + step * index;
+                const y = height - padding - ((value - min) / range) * (height - padding * 2);
+                return { x, y };
+            });
+        }
+
+        function monotonePath(points) {
+            if (!points.length) return '';
+            if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+            const n = points.length;
+            const dx = new Array(n - 1);
+            const slope = new Array(n - 1);
+            for (let i = 0; i < n - 1; i += 1) {
+                dx[i] = points[i + 1].x - points[i].x || 1;
+                slope[i] = (points[i + 1].y - points[i].y) / dx[i];
+            }
+            const m = new Array(n);
+            m[0] = slope[0];
+            m[n - 1] = slope[n - 2];
+            for (let i = 1; i < n - 1; i += 1) {
+                if (slope[i - 1] * slope[i] <= 0 || !isFinite(slope[i - 1]) || !isFinite(slope[i])) {
+                    m[i] = 0;
+                } else {
+                    const w1 = dx[i - 1];
+                    const w2 = dx[i];
+                    m[i] = (w1 + w2) / ((w1 / slope[i]) + (w2 / slope[i - 1]));
+                }
+            }
+            let path = `M ${points[0].x} ${points[0].y}`;
+            for (let i = 0; i < n - 1; i += 1) {
+                const cp1x = points[i].x + dx[i] / 3;
+                const cp1y = points[i].y + m[i] * dx[i] / 3;
+                const cp2x = points[i + 1].x - dx[i] / 3;
+                const cp2y = points[i + 1].y - m[i + 1] * dx[i] / 3;
+                path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${points[i + 1].x} ${points[i + 1].y}`;
+            }
+            return path;
+        }
+
+        function drawChart(row, data, color) {
+            const svg = row.querySelector('svg');
+            const area = svg.querySelector('.area-path');
+            const line = svg.querySelector('.line-path');
+            const points = mapDataPoints(data, chartConfig.width, chartConfig.height, chartConfig.padding);
+            const pathString = monotonePath(points);
+            if (line) {
+                line.setAttribute('d', pathString);
+                line.setAttribute('stroke', color);
+            }
+            const baseline = chartConfig.height - chartConfig.padding;
+            if (area) {
+                const areaPath = `${pathString} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
+                area.setAttribute('d', areaPath);
+            }
+        }
+
+        function renderCharts() {
+            const maxDataPoints = 40;
+            
+            if (currentSection === 'room') {
+                renderRoomCharts(maxDataPoints);
+            } else {
+                renderPatientCharts(maxDataPoints);
+            }
+            
+            // Add chart hover tooltips after rendering
+            setTimeout(setupChartTooltips, 100);
+        }
+
+        function setupChartTooltips() {
+            const chartRows = document.querySelectorAll('#' + currentSection + 'Section .chart-row');
+            chartRows.forEach(row => {
+                const metric = row.dataset.metric;
+                const svg = row.querySelector('svg');
+                if (!svg) return;
+                
+                // Create tooltip element if not exists
+                let tooltip = row.querySelector('.chart-tooltip');
+                if (!tooltip) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'chart-tooltip';
+                    tooltip.innerHTML = '<div class="tooltip-time"></div><div class="tooltip-content"></div>';
+                    tooltip.style.cssText = 'position:absolute;display:none;background:#0F172A;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;pointer-events:none;z-index:10;';
+                    row.style.position = 'relative';
+                    row.appendChild(tooltip);
+                }
+                
+                svg.addEventListener('mousemove', function(e) {
+                    const rect = svg.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const width = rect.width;
+                    const dataIndex = Math.min(filteredRoomData.length - 1, Math.floor((x / width) * filteredRoomData.length));
+                    
+                    let value, time;
+                    if (currentSection === 'room') {
+                        const data = filteredRoomData.slice(0, 40).reverse();
+                        value = data[dataIndex] ? parseFloat(data[dataIndex][metric] || 0).toFixed(1) : '--';
+                        time = data[dataIndex] ? data[dataIndex].recorded_at : '';
+                    } else {
+                        const data = filteredPatientData.slice(0, 40).reverse();
+                        value = data[dataIndex] ? parseFloat(data[dataIndex][metric] || 0).toFixed(1) : '--';
+                        time = data[dataIndex] ? data[dataIndex].date : '';
+                    }
+                    
+                    const unit = metric === 'temperature' ? '°C' : (metric === 'humidity' ? '%' : 'hPa');
+                    tooltip.querySelector('.tooltip-time').textContent = time;
+                    tooltip.querySelector('.tooltip-content').innerHTML = `<strong>${value}${unit}</strong>`;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (x + 10) + 'px';
+                    tooltip.style.top = '10px';
+                });
+                
+                svg.addEventListener('mouseleave', function() {
+                    tooltip.style.display = 'none';
+                });
+            });
+        }
+
+        function renderRoomCharts(maxDataPoints) {
+            const data = filteredRoomData.slice(0, maxDataPoints).reverse();
+            const tempData = data.map(r => parseFloat(r.temperature || 0));
+            const humidityData = data.map(r => parseFloat(r.humidity || 0));
+            const pressureData = data.map(r => parseFloat(r.pressure || 0));
+
+            const tempRow = document.querySelector('#roomSection .chart-row[data-metric="temperature"]');
+            const humidityRow = document.querySelector('#roomSection .chart-row[data-metric="humidity"]');
+            const pressureRow = document.querySelector('#roomSection .chart-row[data-metric="pressure"]');
+
+            if (tempRow) {
+                const valueEl = tempRow.querySelector('.chart-value');
+                if (valueEl && tempData.length > 0) {
+                    valueEl.textContent = `${tempData[tempData.length - 1].toFixed(1)} °C`;
+                }
+                drawChart(tempRow, tempData, metricPalette.temperature);
+            }
+
+            if (humidityRow) {
+                const valueEl = humidityRow.querySelector('.chart-value');
+                if (valueEl && humidityData.length > 0) {
+                    valueEl.textContent = `${humidityData[humidityData.length - 1].toFixed(1)} %`;
+                }
+                drawChart(humidityRow, humidityData, metricPalette.humidity);
+            }
+
+            if (pressureRow) {
+                const valueEl = pressureRow.querySelector('.chart-value');
+                if (valueEl && pressureData.length > 0) {
+                    valueEl.textContent = `${pressureData[pressureData.length - 1].toFixed(1)} hPa`;
+                }
+                drawChart(pressureRow, pressureData, metricPalette.pressure);
+            }
+        }
+
+        function renderPatientCharts(maxDataPoints) {
+            const data = filteredPatientData.slice(0, maxDataPoints).reverse();
+            const tempData = data.map(r => parseFloat(r.temperature || 0));
+            const humidityData = data.map(r => parseFloat(r.humidity || 0));
+            const pressureData = data.map(r => parseFloat(r.pressure || 0));
+
+            const tempRow = document.querySelector('#patientSection .chart-row[data-metric="temperature"]');
+            const humidityRow = document.querySelector('#patientSection .chart-row[data-metric="humidity"]');
+            const pressureRow = document.querySelector('#patientSection .chart-row[data-metric="pressure"]');
+
+            if (tempRow) {
+                const valueEl = tempRow.querySelector('.chart-value');
+                if (valueEl && tempData.length > 0) {
+                    valueEl.textContent = `${tempData[tempData.length - 1].toFixed(1)} °C`;
+                }
+                drawChart(tempRow, tempData, metricPalette.temperature);
+            }
+
+            if (humidityRow) {
+                const valueEl = humidityRow.querySelector('.chart-value');
+                if (valueEl && humidityData.length > 0) {
+                    valueEl.textContent = `${humidityData[humidityData.length - 1].toFixed(1)} %`;
+                }
+                drawChart(humidityRow, humidityData, metricPalette.humidity);
+            }
+
+            if (pressureRow) {
+                const valueEl = pressureRow.querySelector('.chart-value');
+                if (valueEl && pressureData.length > 0) {
+                    valueEl.textContent = `${pressureData[pressureData.length - 1].toFixed(1)} hPa`;
+                }
+                drawChart(pressureRow, pressureData, metricPalette.pressure);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
